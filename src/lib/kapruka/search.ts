@@ -143,7 +143,108 @@ function count(r: SearchResponse): number {
   return r.results?.length ?? 0;
 }
 
+// ---------------------------------------------------------------------------
+// Query planning: noun-first search + descriptor post-filter
+//
+// Kapruka's search treats multi-word queries as OR-loose, so "pink fluffy doll"
+// returns pink shirts and fluffy bottles with zero actual dolls. Fix: pull the
+// strong PRODUCT NOUN out of the query and search on that alone (AND-tight on
+// the thing the shopper actually wants), then rank/keep by the descriptive
+// words ("pink", "fluffy") in code.
+// ---------------------------------------------------------------------------
+const PRODUCT_NOUNS = [
+  "doll", "cake", "flower", "chocolate", "lego", "bear", "toy", "bouquet",
+  "perfume", "watch", "book", "cushion", "mug", "puzzle",
+];
+
+// Words that are never useful descriptors (would spuriously match "For Her"
+// etc. in product names). Descriptors otherwise become the in-code post-filter.
+const STOPWORDS = new Set([
+  "for", "my", "the", "a", "an", "to", "of", "and", "or", "with", "in", "on",
+  "at", "some", "any", "me", "i", "want", "need", "please", "looking", "find",
+  "show", "buy", "send", "her", "him", "his", "them", "gift", "gifts", "one",
+]);
+
+const ENOUGH = 3;
+
+interface QueryPlan {
+  q: string;
+  descriptors: string[];
+  rewritten: boolean;
+}
+
+/** Singularise a naive plural ("dolls" -> "doll") for noun matching. */
+function singular(w: string): string {
+  return w.endsWith("s") ? w.slice(0, -1) : w;
+}
+
+/**
+ * Rewrite the raw query to its product noun(s) and split off the descriptive
+ * words. Falls back to the original query when no product noun is present.
+ */
+function planQuery(rawQ: string): QueryPlan {
+  const trimmed = rawQ.trim();
+  const words = trimmed.toLowerCase().split(/\s+/).filter(Boolean);
+
+  const foundNouns: string[] = [];
+  for (const w of words) {
+    const noun = PRODUCT_NOUNS.includes(w)
+      ? w
+      : PRODUCT_NOUNS.includes(singular(w))
+        ? singular(w)
+        : null;
+    if (noun && !foundNouns.includes(noun)) foundNouns.push(noun);
+  }
+
+  if (foundNouns.length === 0) {
+    return { q: trimmed, descriptors: [], rewritten: false };
+  }
+
+  const chosen = foundNouns.slice(0, 2); // first two nouns if two match
+  const descriptors = words.filter((w) => {
+    if (chosen.includes(w) || chosen.includes(singular(w))) return false;
+    if (STOPWORDS.has(w)) return false;
+    return w.length >= 3;
+  });
+
+  const q = chosen.join(" ");
+  return { q, descriptors, rewritten: q !== trimmed.toLowerCase() };
+}
+
+/**
+ * Keep/boost products whose name or summary contains a descriptor. If we have
+ * enough strong matches, drop the weakly-matched rest; if not, keep everything
+ * but float the strong matches to the front.
+ */
+function applyDescriptorFilter(
+  results: Product[],
+  descriptors: string[],
+): Product[] {
+  if (descriptors.length === 0 || results.length === 0) return results;
+  const matches: Product[] = [];
+  const rest: Product[] = [];
+  for (const p of results) {
+    const hay = `${p.name ?? ""} ${p.summary ?? ""}`.toLowerCase();
+    (descriptors.some((d) => hay.includes(d)) ? matches : rest).push(p);
+  }
+  if (matches.length >= ENOUGH) return matches;
+  return [...matches, ...rest];
+}
+
 export async function searchProducts(o: SearchOptions): Promise<SearchResponse> {
+  const plan = planQuery(o.q);
+  if (plan.rewritten) {
+    // TODO(sprint5): remove this log once query-planning is verified.
+    console.warn(
+      `[search] rewrote q "${o.q}" -> "${plan.q}" ` +
+        `(descriptors: ${plan.descriptors.join(", ") || "none"})`,
+    );
+  }
+  const res = await runSearch({ ...o, q: plan.q });
+  return { ...res, results: applyDescriptorFilter(res.results ?? [], plan.descriptors) };
+}
+
+async function runSearch(o: SearchOptions): Promise<SearchResponse> {
   const primary = await rawSearch(o);
   if (count(primary) >= 3) return primary;
 
