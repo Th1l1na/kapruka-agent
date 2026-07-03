@@ -1,0 +1,25 @@
+# dependencies
+node_modules/
+
+# environment secrets — NEVER commit
+.env
+.env.local
+.env*.local
+
+# build artifacts
+.next/
+out/
+dist/
+build/
+
+# vercel
+.vercel/
+
+# editor / OS
+.vscode/
+.idea/
+.DS_Store
+*.log
+
+# claude code local state (if any)
+.claude/
