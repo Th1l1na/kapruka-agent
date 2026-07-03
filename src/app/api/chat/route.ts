@@ -7,7 +7,7 @@ import {
   type UIMessage,
 } from "ai";
 import { model } from "@/lib/ai/model";
-import { SYSTEM_PROMPT } from "@/lib/ai/system-prompt";
+import { buildSystemPrompt } from "@/lib/ai/system-prompt";
 import { friendlyError } from "@/lib/ai/errors";
 import { kaprukaTools } from "@/lib/kapruka/tools";
 import { cartTools } from "@/lib/cart/tools";
@@ -24,16 +24,18 @@ export async function POST(req: Request) {
 
   const result = streamText({
     model,
-    system: SYSTEM_PROMPT,
+    system: buildSystemPrompt(),
     // Pass `tools` here too: search_products' toModelOutput (which strips the
     // rich product JSON down to a lean summary for the model) runs inside
     // convertToModelMessages when replaying earlier turns' tool results.
     messages: await convertToModelMessages(messages, { tools }),
     tools,
-    // Allow multi-step tool use within one turn. Worst realistic first turn:
-    // list_categories -> search -> fallback search -> get_product -> answer
-    // = 5 steps, so 6 gives one step of headroom without inviting runaway loops.
-    stopWhen: stepCountIs(6),
+    // Allow multi-step tool use within one turn. Sprint 2 adds the checkout
+    // chain, whose longest realistic single turn is:
+    // resolve_city -> check_delivery -> view_cart -> create_order -> answer,
+    // and a discovery turn can still run search -> fallback -> get_product.
+    // 10 covers the worst case with headroom, without inviting runaway loops.
+    stopWhen: stepCountIs(10),
   });
 
   return createUIMessageStreamResponse({

@@ -3,7 +3,17 @@ import { z } from "zod";
 import { callKapruka } from "./client";
 import { cached } from "./cache";
 import { searchProducts } from "./search";
-import type { CategoriesResponse, Product } from "./types";
+import { resolveCity } from "./cities";
+import { checkDelivery } from "./delivery";
+import { createOrder } from "./orders";
+import { getCart, markCheckedOut } from "@/lib/cart/cart";
+import type {
+  CategoriesResponse,
+  CityResolution,
+  DeliveryResult,
+  OrderResult,
+  Product,
+} from "./types";
 
 /**
  * AI SDK tool definitions exposed to Gemini.
@@ -152,8 +162,201 @@ export const getProductTool = tool({
   },
 });
 
+// ---------------------------------------------------------------------------
+// Sprint 2: delivery + checkout tools
+// ---------------------------------------------------------------------------
+
+/** Perishable families (CAKE, FLOWER, COMBO codes) trigger check_delivery's warning. */
+function pickPerishableId(ids: string[]): string | undefined {
+  return ids.find((id) => /^(cake|flower|combo)/i.test(id)) ?? ids[0];
+}
+
+export const resolveCityTool = tool({
+  description:
+    "Resolve a user-typed Sri Lankan city/town to its canonical Kapruka " +
+    "delivery-city name. ALWAYS call this before check_delivery or create_order " +
+    "— never pass raw user-typed city text to those. Handles vernacular spellings " +
+    "and aliases (e.g. 'Malabe' -> 'Malambe'). Returns the best match plus other " +
+    "candidates for disambiguation.",
+  inputSchema: z.object({
+    city: z
+      .string()
+      .min(2)
+      .describe("The city/town exactly as the shopper typed it, e.g. 'Malabe'."),
+  }),
+  execute: async ({ city }) => resolveCity(city),
+  toModelOutput: ({ output }) => {
+    const { query, match, candidates } = output as CityResolution;
+    if (!match) {
+      return {
+        type: "text",
+        value:
+          `No Kapruka delivery city matched "${query}". Ask the shopper to ` +
+          `re-check the spelling or give a nearby town.`,
+      };
+    }
+    const others = candidates
+      .filter((c) => c.name !== match.name)
+      .map((c) => c.name);
+    const aliasHint = match.aliases.length
+      ? ` (aliases: ${match.aliases.slice(0, 4).join(", ")})`
+      : "";
+    const disambig = others.length
+      ? ` Other possible matches: ${others.join(", ")}. If ambiguous, ask which one.`
+      : "";
+    return {
+      type: "text",
+      value:
+        `Canonical city: "${match.name}"${aliasHint}. Confirm this back to the ` +
+        `shopper before proceeding (e.g. "${query} is ${match.name} in our ` +
+        `system — is that right?").${disambig} Use "${match.name}" as the city ` +
+        `for check_delivery and create_order.`,
+    };
+  },
+});
+
+export const checkDeliveryTool = tool({
+  description:
+    "Check whether Kapruka can deliver to a CANONICAL city (from resolve_city) " +
+    "on a given date, and the flat delivery fee (LKR). Pass the cart's product " +
+    "IDs so a freshness warning can be raised for perishable gifts (cakes/flowers). " +
+    "Delivery is one flat fee per order regardless of item count.",
+  inputSchema: z.object({
+    city: z
+      .string()
+      .min(2)
+      .describe("Canonical city name from resolve_city — NOT raw user text."),
+    date: z
+      .string()
+      .optional()
+      .describe("Delivery date, YYYY-MM-DD (Sri Lanka time). Omit to check today."),
+    productIds: z
+      .array(z.string())
+      .optional()
+      .describe("Cart product IDs; used to detect perishable items for a warning."),
+  }),
+  execute: async ({ city, date, productIds }) => {
+    const productId = productIds?.length ? pickPerishableId(productIds) : undefined;
+    return checkDelivery({ city, date, productId });
+  },
+  // No card renders for this tool — the model narrates the outcome. Give it the
+  // exact conversational move for each mode so it never dead-ends on "unavailable".
+  toModelOutput: ({ output }) => {
+    const r = output as DeliveryResult;
+    if (r.mode === "past_date") {
+      return {
+        type: "text",
+        value:
+          "That delivery date is in the past. Warmly ask the shopper for a " +
+          "today-or-future date, then check again.",
+      };
+    }
+    if (r.mode === "unavailable") {
+      return {
+        type: "text",
+        value:
+          `Delivery to ${r.city} isn't available for ${r.date} and no alternative ` +
+          `was suggested. Apologise gently and ask for a different date or nearby city.`,
+      };
+    }
+    const warn = r.perishableWarning
+      ? ` IMPORTANT perishable note to surface prominently BEFORE confirming the ` +
+        `order: "${r.perishableWarning}"`
+      : "";
+    if (r.mode === "rescheduled") {
+      return {
+        type: "text",
+        value:
+          `Requested date is full for ${r.city}. The server suggests ` +
+          `${r.nextAvailableDate}. Offer this conversationally (e.g. "today's slots ` +
+          `are full — shall I deliver on ${r.nextAvailableDate} instead?"). Do NOT ` +
+          `end on "unavailable". Flat delivery fee is LKR ${r.rate}.${warn}`,
+      };
+    }
+    return {
+      type: "text",
+      value:
+        `Delivery to ${r.city} on ${r.date} is available. Flat delivery fee is ` +
+        `LKR ${r.rate}.${warn}`,
+    };
+  },
+});
+
+export const createOrderTool = tool({
+  description:
+    "Create the Kapruka order and return a click-to-pay link. Call this ONLY " +
+    "after reading back the full order summary and getting explicit shopper " +
+    "confirmation. Uses the current cart. City MUST be the canonical name from " +
+    "resolve_city. An order-summary card renders automatically from the result.",
+  inputSchema: z.object({
+    recipient: z
+      .object({
+        name: z.string().min(1).describe("Recipient's name."),
+        phone: z
+          .string()
+          .min(7)
+          .describe("Recipient phone, local (077...) or E.164 (+9477...)."),
+        address: z.string().min(3).describe("Street address."),
+        city: z
+          .string()
+          .min(2)
+          .describe("Canonical city from resolve_city — NOT raw user text."),
+        instructions: z
+          .string()
+          .optional()
+          .describe("Optional delivery notes, only if the shopper volunteered them."),
+      })
+      .describe("Recipient + delivery details."),
+    deliveryDate: z.string().describe("Delivery date, YYYY-MM-DD (today or future)."),
+    senderName: z.string().min(1).describe("The sender's name for the gift card."),
+    giftMessage: z
+      .string()
+      .max(300)
+      .optional()
+      .describe("Optional gift-card message."),
+  }),
+  execute: async ({ recipient, deliveryDate, senderName, giftMessage }) => {
+    const cart = getCart();
+    const result = await createOrder({
+      items: cart.items,
+      recipient,
+      deliveryDate,
+      senderName,
+      giftMessage,
+    });
+    if (result.ok) markCheckedOut();
+    return result;
+  },
+  // The OrderSummary card (with Pay-now / Send-to-family buttons and the pay
+  // link) renders from this output — keep the model from re-dumping it.
+  toModelOutput: ({ output }) => {
+    const r = output as OrderResult;
+    if (!r.ok) {
+      return {
+        type: "text",
+        value:
+          `Order creation failed: ${r.message} Apologise warmly and offer to try ` +
+          `again in a moment. Do not invent an order reference.`,
+      };
+    }
+    return {
+      type: "text",
+      value:
+        `Order created. An order-summary card with "Pay now" and "Send to family ` +
+        `to pay" buttons and the pay link is ALREADY shown to the shopper — do NOT ` +
+        `repeat the details or paste the URL. Refer to ${r.orderRef} as the ` +
+        `"order reference" (NEVER a tracking number). Remind them warmly the pay ` +
+        `link is valid for 60 minutes. Add one short warm line, e.g. inviting them ` +
+        `to pay now or forward it to family.`,
+    };
+  },
+});
+
 export const kaprukaTools = {
   search_products: searchProductsTool,
   list_categories: listCategoriesTool,
   get_product: getProductTool,
+  resolve_city: resolveCityTool,
+  check_delivery: checkDeliveryTool,
+  create_order: createOrderTool,
 };
