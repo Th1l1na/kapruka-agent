@@ -13,9 +13,10 @@ const SUGGESTIONS = [
 ];
 
 export function ChatPanel() {
-  const { messages, sendMessage, status } = useChat({
-    transport: new DefaultChatTransport({ api: "/api/chat" }),
-  });
+  const { messages, sendMessage, status, error, regenerate, clearError } =
+    useChat({
+      transport: new DefaultChatTransport({ api: "/api/chat" }),
+    });
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -29,6 +30,7 @@ export function ChatPanel() {
   function send(text: string) {
     const trimmed = text.trim();
     if (!trimmed || status !== "ready") return;
+    if (error) clearError();
     sendMessage({ text: trimmed });
     setInput("");
   }
@@ -61,6 +63,20 @@ export function ChatPanel() {
           </div>
         ) : (
           <MessageList messages={messages} status={status} />
+        )}
+
+        {error && (
+          <div className="mx-auto mt-4 flex max-w-md flex-col items-start gap-2 rounded-xl border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-950/40 dark:text-amber-200">
+            <span>{error.message}</span>
+            <button
+              type="button"
+              onClick={() => regenerate()}
+              disabled={status !== "ready"}
+              className="rounded-lg border border-amber-400/60 px-3 py-1 text-xs font-medium transition hover:bg-amber-100 disabled:opacity-40 dark:hover:bg-amber-900/40"
+            >
+              Try again
+            </button>
+          </div>
         )}
       </div>
 

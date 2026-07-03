@@ -39,14 +39,8 @@ export const searchProductsTool = tool({
       .min(3)
       .describe(
         "Search keywords, e.g. 'birthday cake', 'roses for mom'. " +
-          "Min 3 chars; use specific terms, not stopwords only.",
-      ),
-    category: z
-      .string()
-      .optional()
-      .describe(
-        "Optional category NAME to narrow results, e.g. 'Cakes', 'Flowers', " +
-          "'Chocolates'. Use a name from list_categories.",
+          "Min 3 chars; use specific terms, not stopwords only. For " +
+          "occasion-based requests, pass the shopper's full phrase as the query.",
       ),
     limit: z
       .number()
@@ -63,12 +57,10 @@ export const searchProductsTool = tool({
     inStockOnly: z.boolean().optional(),
   }),
   execute: async (args) => {
-    // Never let the model steer into the excluded category.
-    const category = isExcludedCategoryName(args.category)
-      ? undefined
-      : args.category;
-
-    const res = await searchProducts({ ...args, category });
+    // Category filtering is disabled: Kapruka's category taxonomy is unreliable
+    // (e.g. "cakes" resolves to bakeware, not edible cakes). We always search by
+    // keyword only, so no category is ever passed through.
+    const res = await searchProducts({ ...args, category: undefined });
 
     // Defence-in-depth (per-result category is unreliable but cheap to check).
     const products = res.results.filter(
@@ -81,6 +73,36 @@ export const searchProductsTool = tool({
       count: products.length,
       products,
       next_cursor: res.next_cursor ?? null,
+    };
+  },
+  // The UI renders full product cards from this tool's output (image, price,
+  // link — see MessageList/ProductGrid). The MODEL, however, must not see that
+  // rich JSON: gemini-2.5-flash tends to echo it verbatim into the chat as a
+  // raw blob. So we hand the model a lean text summary instead — enough to
+  // write a warm line and to map "the black one" -> an id for add_to_cart, with
+  // an explicit reminder that the cards are already on screen.
+  toModelOutput: ({ output }) => {
+    const { count, products } = output as {
+      count: number;
+      products: Product[];
+    };
+    if (count === 0) {
+      return {
+        type: "text",
+        value: "No products found. Suggest a different or simpler keyword.",
+      };
+    }
+    const lines = products
+      .map((p) => `- ${p.name} — ${p.price.currency} ${p.price.amount} (id: ${p.id})`)
+      .join("\n");
+    return {
+      type: "text",
+      value:
+        `${count} product card(s) are ALREADY shown to the shopper (with names, ` +
+        `prices, images and links). Do NOT repeat this list in your reply and do ` +
+        `NOT paste any of it as JSON — just add one short warm line and a follow-up ` +
+        `question. The items below are for your reference only, e.g. to resolve ` +
+        `which product the shopper means when adding to the cart:\n${lines}`,
     };
   },
 });

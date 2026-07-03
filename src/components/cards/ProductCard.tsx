@@ -8,8 +8,7 @@ function formatPrice(amount: number, currency: string): string {
 }
 
 export function ProductCard({ product }: { product: Product }) {
-  const { name, price, image_url, url, stock_level } = product;
-  const lowStock = stock_level === "low";
+  const { name, price, image_url, url } = product;
 
   return (
     <a
@@ -27,14 +26,9 @@ export function ProductCard({ product }: { product: Product }) {
           loading="lazy"
           className="h-full w-full object-cover transition group-hover:scale-[1.03]"
         />
-        {lowStock && (
-          <span className="absolute left-2 top-2 rounded-full bg-amber-500/95 px-2 py-0.5 text-xs font-medium text-white shadow">
-            Low stock
-          </span>
-        )}
       </div>
       <div className="flex flex-1 flex-col gap-1 p-3">
-        <h3 className="line-clamp-2 text-sm font-medium text-neutral-900 dark:text-neutral-100">
+        <h3 className="line-clamp-2 min-h-[2.5rem] text-sm font-medium text-neutral-900 dark:text-neutral-100">
           {name}
         </h3>
         <p className="mt-auto text-sm font-semibold text-emerald-700 dark:text-emerald-400">
