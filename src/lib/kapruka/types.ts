@@ -18,7 +18,11 @@ export interface Product {
   price: Price;
   compare_at_price: number | null;
   in_stock: boolean;
-  stock_level: string; // "low" | others TBC
+  // Unreliable as a scarcity signal: defaults to "low" on essentially every
+  // product, so it does not indicate real stock scarcity. Do not surface it in
+  // the UI. May revisit a real out-of-stock indicator in a later sprint if a
+  // trustworthy source turns up.
+  stock_level: string;
   image_url: string;
   /** Unreliable in search results (often "general") — do not filter on this. */
   category?: { id?: string; name: string; slug: string };
