@@ -38,6 +38,9 @@ export interface CreateOrderInput {
   recipient: OrderRecipient;
   deliveryDate: string;
   senderName: string;
+  /** Optional fuller sender identity; guest defaults on the pay page if absent. */
+  senderEmail?: string | null;
+  senderPhone?: string | null;
   giftMessage?: string | null;
 }
 
@@ -72,6 +75,8 @@ function toLine(item: CartItem): OrderLine {
 export async function createOrder(
   input: CreateOrderInput,
 ): Promise<OrderResult> {
+  // senderEmail / senderPhone are intentionally not destructured: the live MCP
+  // sender schema rejects them (see the sender mapping below).
   const { items, recipient, deliveryDate, senderName, giftMessage } = input;
 
   // TODO(sprint5): drop this log once rate-limit debugging is done.
@@ -101,6 +106,10 @@ export async function createOrder(
         ? { instructions: recipient.instructions }
         : {}),
     },
+    // The live MCP `sender` schema accepts ONLY `name` — passing email/phone
+    // triggers a Pydantic `extra_forbidden` error and fails the whole order.
+    // We still accept senderEmail/senderPhone at the tool layer (approved API),
+    // but do NOT forward them; the pay page uses guest defaults for those.
     sender: { name: senderName },
     ...(giftMessage ? { gift_message: giftMessage } : {}),
     currency: "LKR",

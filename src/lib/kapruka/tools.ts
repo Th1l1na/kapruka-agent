@@ -5,13 +5,10 @@ import { cached } from "./cache";
 import { searchProducts } from "./search";
 import { resolveCity } from "./cities";
 import { checkDelivery } from "./delivery";
-import { createOrder } from "./orders";
-import { getCart, markCheckedOut } from "@/lib/cart/cart";
 import type {
   CategoriesResponse,
   CityResolution,
   DeliveryResult,
-  OrderResult,
   Product,
 } from "./types";
 
@@ -282,81 +279,15 @@ export const checkDeliveryTool = tool({
   },
 });
 
-export const createOrderTool = tool({
-  description:
-    "Create the Kapruka order and return a click-to-pay link. Call this ONLY " +
-    "after reading back the full order summary and getting explicit shopper " +
-    "confirmation. Uses the current cart. City MUST be the canonical name from " +
-    "resolve_city. An order-summary card renders automatically from the result.",
-  inputSchema: z.object({
-    recipient: z
-      .object({
-        name: z.string().min(1).describe("Recipient's name."),
-        phone: z
-          .string()
-          .min(7)
-          .describe("Recipient phone, local (077...) or E.164 (+9477...)."),
-        address: z.string().min(3).describe("Street address."),
-        city: z
-          .string()
-          .min(2)
-          .describe("Canonical city from resolve_city — NOT raw user text."),
-        instructions: z
-          .string()
-          .optional()
-          .describe("Optional delivery notes, only if the shopper volunteered them."),
-      })
-      .describe("Recipient + delivery details."),
-    deliveryDate: z.string().describe("Delivery date, YYYY-MM-DD (today or future)."),
-    senderName: z.string().min(1).describe("The sender's name for the gift card."),
-    giftMessage: z
-      .string()
-      .max(300)
-      .optional()
-      .describe("Optional gift-card message."),
-  }),
-  execute: async ({ recipient, deliveryDate, senderName, giftMessage }) => {
-    const cart = getCart();
-    const result = await createOrder({
-      items: cart.items,
-      recipient,
-      deliveryDate,
-      senderName,
-      giftMessage,
-    });
-    if (result.ok) markCheckedOut();
-    return result;
-  },
-  // The OrderSummary card (with Pay-now / Send-to-family buttons and the pay
-  // link) renders from this output — keep the model from re-dumping it.
-  toModelOutput: ({ output }) => {
-    const r = output as OrderResult;
-    if (!r.ok) {
-      return {
-        type: "text",
-        value:
-          `Order creation failed: ${r.message} Apologise warmly and offer to try ` +
-          `again in a moment. Do not invent an order reference.`,
-      };
-    }
-    return {
-      type: "text",
-      value:
-        `Order created. An order-summary card with "Pay now" and "Send to family ` +
-        `to pay" buttons and the pay link is ALREADY shown to the shopper — do NOT ` +
-        `repeat the details or paste the URL. Refer to ${r.orderRef} as the ` +
-        `"order reference" (NEVER a tracking number). Remind them warmly the pay ` +
-        `link is valid for 60 minutes. Add one short warm line, e.g. inviting them ` +
-        `to pay now or forward it to family.`,
-    };
-  },
-});
-
+// Sprint 3: `create_order` is no longer a model-facing tool. Checkout runs
+// through the single `checkout_all` tool (src/lib/cart/checkout.ts), which
+// calls the createOrder() function once per recipient cart. resolve_city and
+// check_delivery stay exposed — the model still uses them during discovery and
+// the pre-checkout read-back.
 export const kaprukaTools = {
   search_products: searchProductsTool,
   list_categories: listCategoriesTool,
   get_product: getProductTool,
   resolve_city: resolveCityTool,
   check_delivery: checkDeliveryTool,
-  create_order: createOrderTool,
 };

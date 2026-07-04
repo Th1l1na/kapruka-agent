@@ -62,7 +62,7 @@ export function ChatPanel() {
             </div>
           </div>
         ) : (
-          <MessageList messages={messages} status={status} />
+          <MessageList messages={messages} status={status} onAction={send} />
         )}
 
         {error && (
