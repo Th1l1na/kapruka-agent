@@ -1,6 +1,7 @@
 import { isToolUIPart, getToolName, type UIMessage } from "ai";
-import type { Product } from "@/lib/kapruka/types";
+import type { Product, OrderResult } from "@/lib/kapruka/types";
 import { ProductGrid } from "@/components/cards/ProductCard";
+import { OrderSummary } from "@/components/order/OrderSummary";
 
 type SearchOutput = {
   count: number;
@@ -16,6 +17,9 @@ const TOOL_RUNNING_LABEL: Record<string, string> = {
   add_to_cart: "Adding to your cart…",
   remove_from_cart: "Updating your cart…",
   view_cart: "Opening your cart…",
+  resolve_city: "Finding that city on Kapruka…",
+  check_delivery: "Checking delivery for that date…",
+  create_order: "Creating your order…",
 };
 
 function Bubble({
@@ -79,7 +83,14 @@ export function MessageList({
                     </div>
                   );
                 }
-                // Other tools (categories / get_product / cart) — the model
+                if (name === "create_order") {
+                  return (
+                    <div key={i} className="my-1">
+                      <OrderSummary data={part.output as OrderResult} />
+                    </div>
+                  );
+                }
+                // Other tools (categories / get_product / cart / city / delivery) — the model
                 // narrates these in text, so nothing extra to render here.
                 return null;
               }
