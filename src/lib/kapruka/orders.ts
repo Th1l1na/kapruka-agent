@@ -24,7 +24,6 @@ import type {
  * WILL hit the 30-orders/hour MCP limit during a demo.
  *
  * TODO(sprint3): support `icing_text` per cart item ("message on the cake").
- * TODO(sprint5): remove the console.log calls added here for rate-limit debugging.
  */
 export class KaprukaOrderError extends Error {
   constructor(message: string) {
@@ -79,13 +78,6 @@ export async function createOrder(
   // sender schema rejects them (see the sender mapping below).
   const { items, recipient, deliveryDate, senderName, giftMessage } = input;
 
-  // TODO(sprint5): drop this log once rate-limit debugging is done.
-  console.log("[create_order] attempt", {
-    items: items.map((i) => `${i.id}x${i.quantity}`),
-    city: recipient.city,
-    date: deliveryDate,
-  });
-
   if (items.length === 0) {
     return { ok: false, message: "Your cart is empty — let's add a gift first." };
   }
@@ -139,9 +131,10 @@ export async function createOrder(
       grandTotal: res.summary?.grand_total ?? 0,
     };
 
-    console.log("[create_order] ok", { ref: result.orderRef });
     return result;
   } catch (err) {
+    // Keep a concise server-side line for ops: a swallowed order failure is
+    // otherwise invisible (the shopper only sees the friendly ok:false message).
     const detail = err instanceof KaprukaError ? err.message : String(err);
     console.error("[create_order] failed", { detail });
     return { ok: false, message: FRIENDLY_FAILURE };

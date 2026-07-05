@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { OrderResult } from "@/lib/kapruka/types";
+import { type Language, COPY } from "@/lib/ai/language";
 
 /** "LKR 5,770" — grouped digits, no decimals (Kapruka prices are whole LKR). */
 function formatPrice(amount: number, currency = "LKR"): string {
@@ -48,8 +49,15 @@ function FailureCard({ message }: { message: string }) {
   );
 }
 
-export function OrderSummary({ data }: { data: OrderResult }) {
+export function OrderSummary({
+  data,
+  language,
+}: {
+  data: OrderResult;
+  language: Language;
+}) {
   const countdown = useCountdown(data.ok ? data.expiresAt : "");
+  const copy = COPY[language].order;
 
   if (!data.ok) return <FailureCard message={data.message} />;
 
@@ -87,10 +95,10 @@ export function OrderSummary({ data }: { data: OrderResult }) {
                 : "text-sm font-semibold tabular-nums text-emerald-800 dark:text-emerald-300"
             }
           >
-            {expired ? "Expired" : label}
+            {expired ? copy.expired : label}
           </p>
           <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
-            {expired ? "pay link" : "pay link valid"}
+            {expired ? copy.payLink : copy.payLinkValid}
           </p>
         </div>
       </div>
@@ -215,7 +223,7 @@ export function OrderSummary({ data }: { data: OrderResult }) {
 
         {expired ? (
           <p className="text-center text-xs text-red-600 dark:text-red-400">
-            This pay link has expired. Ask me to recreate the order for a fresh link.
+            {copy.expiredNote}
           </p>
         ) : null}
 

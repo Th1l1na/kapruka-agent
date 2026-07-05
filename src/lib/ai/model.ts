@@ -1,10 +1,10 @@
-import { google } from "@ai-sdk/google";
+import { anthropic } from "@ai-sdk/anthropic";
 
 /**
  * Model selection for the gift agent.
  *
- * gemini-2.5-flash via @ai-sdk/google. The provider reads the API key from
- * GOOGLE_GENERATIVE_AI_API_KEY (see .env.example). Kept behind one export so
- * later sprints can swap models or add tiering in a single place.
+ * claude-haiku-4-5 via @ai-sdk/anthropic. The provider reads the API key from
+ * ANTHROPIC_API_KEY (see .env.example). Kept behind one export so later sprints
+ * can swap models or add tiering in a single place.
  */
-export const model = google("gemini-2.5-flash");
+export const model = anthropic("claude-haiku-4-5");
