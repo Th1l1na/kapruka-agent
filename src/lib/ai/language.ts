@@ -128,6 +128,13 @@ export interface UiCopy {
     /** Rebook button; "{date}" is replaced with the formatted next date. */
     bookInstead: string;
   };
+  /** Screen-reader labels for the theme toggle (aria-label only). */
+  themeToggle: {
+    /** Announced when the button will switch the UI to light mode. */
+    toLight: string;
+    /** Announced when the button will switch the UI to dark mode. */
+    toDark: string;
+  };
 }
 
 const TOOL_LABELS_EN: Record<string, string> = {
@@ -192,6 +199,10 @@ export const COPY: Record<Language, UiCopy> = {
       needsAttention: "needs attention",
       bookInstead: "Book {date} instead",
     },
+    themeToggle: {
+      toLight: "Switch to light mode",
+      toDark: "Switch to dark mode",
+    },
   },
   sinhala: {
     tryAgain: "ආයෙ try කරන්න",
@@ -212,6 +223,10 @@ export const COPY: Record<Language, UiCopy> = {
       needsAttention: "අවධානය ඕන",
       bookInstead: "ඒ වෙනුවට {date} book කරන්න",
     },
+    themeToggle: {
+      toLight: "Light mode එකට මාරු කරන්න",
+      toDark: "Dark mode එකට මාරු කරන්න",
+    },
   },
   tanglish: {
     tryAgain: "Ayet try karanna",
@@ -231,6 +246,10 @@ export const COPY: Record<Language, UiCopy> = {
     batch: {
       needsAttention: "attention ona",
       bookInstead: "Eeka wenuwata {date} book karanna",
+    },
+    themeToggle: {
+      toLight: "Light mode ekata maaru karanna",
+      toDark: "Dark mode ekata maaru karanna",
     },
   },
 };

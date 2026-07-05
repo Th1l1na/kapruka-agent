@@ -1,7 +1,12 @@
 @import "tailwindcss";
 
+/* Class-based dark mode: `dark:` utilities respond to a `.dark` on <html>,
+   not the OS `prefers-color-scheme`. The theme toggle owns the class. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
+  /* Light mode: warm cream background, dark text. */
+  --background: #faf6ee;
   --foreground: #171717;
 }
 
@@ -12,11 +17,10 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Dark mode is the default look (see .dark on <html>); values unchanged. */
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
 }
 
 body {

@@ -25,7 +25,10 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      // Default to dark — the established look. The theme toggle reconciles with
+      // the persisted choice client-side (see ThemeToggle), so returning
+      // light-mode users flip after hydration.
+      className={`dark ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

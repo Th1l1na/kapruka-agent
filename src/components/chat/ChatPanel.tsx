@@ -5,6 +5,7 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { MessageList } from "./MessageList";
 import { Composer } from "./Composer";
+import { ThemeToggle } from "./ThemeToggle";
 import {
   type Language,
   DEFAULT_LANGUAGE,
@@ -45,7 +46,7 @@ export function ChatPanel() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex justify-center pt-2">
+      <div className="flex items-center justify-center gap-2 pt-2">
         <div
           role="radiogroup"
           aria-label="Language"
@@ -72,6 +73,7 @@ export function ChatPanel() {
             );
           })}
         </div>
+        <ThemeToggle language={language} />
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-1 py-4">
