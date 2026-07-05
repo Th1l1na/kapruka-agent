@@ -178,3 +178,50 @@ export type OrderResult =
       grandTotal: number;
     }
   | { ok: false; message: string };
+
+/** The `ok:true` branch of OrderResult — a fully-created, payable order. */
+export type OrderSuccess = Extract<OrderResult, { ok: true }>;
+
+// ---------------------------------------------------------------------------
+// Sprint 3: multi-recipient batch checkout
+// ---------------------------------------------------------------------------
+
+/**
+ * One cart's outcome inside a `checkout_all` batch.
+ *  - "success": order created — render a full OrderSummary card.
+ *  - "failed": a SOFT failure (couldn't resolve city, delivery unavailable,
+ *    order-create error). Never aborts the batch; the cart is surfaced for
+ *    retry. When `nextAvailableDate` is present (delivery slots were full),
+ *    the UI offers a "Book <date> instead" button that re-runs just this cart.
+ */
+export type CheckoutOutcome =
+  | { status: "success"; cartName: string; order: OrderSuccess }
+  | {
+      status: "failed";
+      cartName: string;
+      reason: string;
+      nextAvailableDate?: string;
+    };
+
+/**
+ * Result of the `checkout_all` tool.
+ *  - `incomplete`: pre-flight validation found carts missing required recipient
+ *    fields (or items). NO MCP call was made — the model prompts for the gaps
+ *    and retries. Prevents burning the shared rate limit on a partial batch.
+ *  - `empty`: no open cart had items to check out.
+ *  - `ok:true`: the batch ran; `outcomes` holds per-cart success/failure. This
+ *    is the only variant that renders a CheckoutBatch card.
+ */
+export type CheckoutAllResult =
+  | {
+      ok: false;
+      reason: "incomplete";
+      carts: { cartName: string; missing: string[] }[];
+    }
+  | { ok: false; reason: "empty"; message: string }
+  | {
+      ok: true;
+      outcomes: CheckoutOutcome[];
+      successCount: number;
+      failureCount: number;
+    };

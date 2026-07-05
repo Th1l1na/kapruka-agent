@@ -1,7 +1,7 @@
 import { isToolUIPart, getToolName, type UIMessage } from "ai";
-import type { Product, OrderResult } from "@/lib/kapruka/types";
+import type { Product, CheckoutAllResult } from "@/lib/kapruka/types";
 import { ProductGrid } from "@/components/cards/ProductCard";
-import { OrderSummary } from "@/components/order/OrderSummary";
+import { CheckoutBatch } from "@/components/order/CheckoutBatch";
 
 type SearchOutput = {
   count: number;
@@ -14,12 +14,14 @@ const TOOL_RUNNING_LABEL: Record<string, string> = {
   search_products: "Looking through the Kapruka catalogue…",
   list_categories: "Checking Kapruka's gift categories…",
   get_product: "Fetching the details…",
+  create_cart: "Starting a new gift…",
+  list_carts: "Reviewing your gifts…",
   add_to_cart: "Adding to your cart…",
   remove_from_cart: "Updating your cart…",
-  view_cart: "Opening your cart…",
+  set_recipient: "Noting the delivery details…",
   resolve_city: "Finding that city on Kapruka…",
   check_delivery: "Checking delivery for that date…",
-  create_order: "Creating your order…",
+  checkout_all: "Creating your orders…",
 };
 
 function Bubble({
@@ -48,9 +50,12 @@ function Bubble({
 export function MessageList({
   messages,
   status,
+  onAction,
 }: {
   messages: UIMessage[];
   status: string;
+  /** Lets a card (e.g. CheckoutBatch's rebook button) send a follow-up message. */
+  onAction?: (text: string) => void;
 }) {
   return (
     <div className="flex flex-col gap-4">
@@ -83,12 +88,18 @@ export function MessageList({
                     </div>
                   );
                 }
-                if (name === "create_order") {
-                  return (
-                    <div key={i} className="my-1">
-                      <OrderSummary data={part.output as OrderResult} />
-                    </div>
-                  );
+                if (name === "checkout_all") {
+                  const out = part.output as CheckoutAllResult;
+                  // Only the ok:true batch renders a card. The incomplete/empty
+                  // variants are narrated by the model (via toModelOutput).
+                  if (out?.ok) {
+                    return (
+                      <div key={i} className="my-1">
+                        <CheckoutBatch data={out} onAction={onAction} />
+                      </div>
+                    );
+                  }
+                  return null;
                 }
                 // Other tools (categories / get_product / cart / city / delivery) — the model
                 // narrates these in text, so nothing extra to render here.

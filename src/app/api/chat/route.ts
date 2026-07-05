@@ -30,12 +30,13 @@ export async function POST(req: Request) {
     // convertToModelMessages when replaying earlier turns' tool results.
     messages: await convertToModelMessages(messages, { tools }),
     tools,
-    // Allow multi-step tool use within one turn. Sprint 2 adds the checkout
-    // chain, whose longest realistic single turn is:
-    // resolve_city -> check_delivery -> view_cart -> create_order -> answer,
-    // and a discovery turn can still run search -> fallback -> get_product.
-    // 10 covers the worst case with headroom, without inviting runaway loops.
-    stopWhen: stepCountIs(10),
+    // Allow multi-step tool use within one turn. Sprint 3's worst-case single
+    // turn is a multi-recipient setup: e.g. two searches, then per recipient
+    // create_cart -> add_to_cart -> set_recipient (x2), then list_carts to read
+    // back — ~10-11 tool calls before the model answers. checkout_all itself is
+    // one atomic call (it loops recipients internally, off the model's budget).
+    // 16 covers that with headroom, without inviting runaway loops.
+    stopWhen: stepCountIs(16),
   });
 
   return createUIMessageStreamResponse({
