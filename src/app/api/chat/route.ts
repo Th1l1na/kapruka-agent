@@ -8,6 +8,7 @@ import {
 } from "ai";
 import { model } from "@/lib/ai/model";
 import { buildSystemPrompt } from "@/lib/ai/system-prompt";
+import { toLanguage } from "@/lib/ai/language";
 import { friendlyError } from "@/lib/ai/errors";
 import { kaprukaTools } from "@/lib/kapruka/tools";
 import { cartTools } from "@/lib/cart/tools";
@@ -18,13 +19,17 @@ export const runtime = "nodejs";
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
-  const { messages }: { messages: UIMessage[] } = await req.json();
+  // `language` is the current UI toggle, sent per-turn in the request body
+  // (ChatPanel passes it via sendMessage's `body`). Default to English if absent.
+  const { messages, language }: { messages: UIMessage[]; language?: unknown } =
+    await req.json();
 
+  const lang = toLanguage(language);
   const tools = { ...kaprukaTools, ...cartTools };
 
   const result = streamText({
     model,
-    system: buildSystemPrompt(),
+    system: buildSystemPrompt(lang),
     // Pass `tools` here too: search_products' toModelOutput (which strips the
     // rich product JSON down to a lean summary for the model) runs inside
     // convertToModelMessages when replaying earlier turns' tool results.
@@ -42,9 +47,10 @@ export async function POST(req: Request) {
   return createUIMessageStreamResponse({
     stream: toUIMessageStream({
       stream: result.stream,
-      // Replace the default "An error occurred." with a friendly line
-      // (quota/429, Kapruka rate limit, etc.). Real error still logged.
-      onError: friendlyError,
+      // Replace the default "An error occurred." with a friendly line in the
+      // shopper's current language (quota/429, Kapruka rate limit, MCP timeout,
+      // etc.). Real error still logged server-side by the AI SDK.
+      onError: (error) => friendlyError(error, lang),
     }),
   });
 }

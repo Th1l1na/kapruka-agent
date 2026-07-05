@@ -61,23 +61,9 @@ function adultReason(p: Product): string | null {
   return null;
 }
 
-/**
- * Drop adult products, logging each removal with its reason.
- * TODO(sprint5): remove the console logging once verified in production.
- */
+/** Drop adult products (see adultReason for the match rules). */
 function filterAdult(results: Product[] | undefined): Product[] {
-  const kept: Product[] = [];
-  for (const p of results ?? []) {
-    const reason = adultReason(p);
-    if (reason) {
-      console.warn(
-        `[search] dropped adult product ${p.id} "${p.name}" (${reason})`,
-      );
-    } else {
-      kept.push(p);
-    }
-  }
-  return kept;
+  return (results ?? []).filter((p) => adultReason(p) === null);
 }
 
 export type SearchSort =
@@ -170,7 +156,6 @@ const ENOUGH = 3;
 interface QueryPlan {
   q: string;
   descriptors: string[];
-  rewritten: boolean;
 }
 
 /** Singularise a naive plural ("dolls" -> "doll") for noun matching. */
@@ -197,7 +182,7 @@ function planQuery(rawQ: string): QueryPlan {
   }
 
   if (foundNouns.length === 0) {
-    return { q: trimmed, descriptors: [], rewritten: false };
+    return { q: trimmed, descriptors: [] };
   }
 
   const chosen = foundNouns.slice(0, 2); // first two nouns if two match
@@ -208,7 +193,7 @@ function planQuery(rawQ: string): QueryPlan {
   });
 
   const q = chosen.join(" ");
-  return { q, descriptors, rewritten: q !== trimmed.toLowerCase() };
+  return { q, descriptors };
 }
 
 /**
@@ -233,13 +218,6 @@ function applyDescriptorFilter(
 
 export async function searchProducts(o: SearchOptions): Promise<SearchResponse> {
   const plan = planQuery(o.q);
-  if (plan.rewritten) {
-    // TODO(sprint5): remove this log once query-planning is verified.
-    console.warn(
-      `[search] rewrote q "${o.q}" -> "${plan.q}" ` +
-        `(descriptors: ${plan.descriptors.join(", ") || "none"})`,
-    );
-  }
   const res = await runSearch({ ...o, q: plan.q });
   return { ...res, results: applyDescriptorFilter(res.results ?? [], plan.descriptors) };
 }

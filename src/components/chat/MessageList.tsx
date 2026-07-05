@@ -2,26 +2,12 @@ import { isToolUIPart, getToolName, type UIMessage } from "ai";
 import type { Product, CheckoutAllResult } from "@/lib/kapruka/types";
 import { ProductGrid } from "@/components/cards/ProductCard";
 import { CheckoutBatch } from "@/components/order/CheckoutBatch";
+import { type Language, COPY, toolLabel } from "@/lib/ai/language";
 
 type SearchOutput = {
   count: number;
   products: Product[];
   next_cursor: string | null;
-};
-
-/** Friendly one-liner for a tool while it's still running. */
-const TOOL_RUNNING_LABEL: Record<string, string> = {
-  search_products: "Looking through the Kapruka catalogue…",
-  list_categories: "Checking Kapruka's gift categories…",
-  get_product: "Fetching the details…",
-  create_cart: "Starting a new gift…",
-  list_carts: "Reviewing your gifts…",
-  add_to_cart: "Adding to your cart…",
-  remove_from_cart: "Updating your cart…",
-  set_recipient: "Noting the delivery details…",
-  resolve_city: "Finding that city on Kapruka…",
-  check_delivery: "Checking delivery for that date…",
-  checkout_all: "Creating your orders…",
 };
 
 function Bubble({
@@ -50,10 +36,13 @@ function Bubble({
 export function MessageList({
   messages,
   status,
+  language,
   onAction,
 }: {
   messages: UIMessage[];
   status: string;
+  /** Current toggle — localizes loading lines, empty-results, and cards. */
+  language: Language;
   /** Lets a card (e.g. CheckoutBatch's rebook button) send a follow-up message. */
   onAction?: (text: string) => void;
 }) {
@@ -84,7 +73,10 @@ export function MessageList({
                   const out = part.output as SearchOutput;
                   return (
                     <div key={i} className="my-1">
-                      <ProductGrid products={out?.products ?? []} />
+                      <ProductGrid
+                        products={out?.products ?? []}
+                        language={language}
+                      />
                     </div>
                   );
                 }
@@ -95,7 +87,11 @@ export function MessageList({
                   if (out?.ok) {
                     return (
                       <div key={i} className="my-1">
-                        <CheckoutBatch data={out} onAction={onAction} />
+                        <CheckoutBatch
+                          data={out}
+                          language={language}
+                          onAction={onAction}
+                        />
                       </div>
                     );
                   }
@@ -116,7 +112,7 @@ export function MessageList({
                     key={i}
                     className="pl-1 text-xs italic text-neutral-400"
                   >
-                    {TOOL_RUNNING_LABEL[name] ?? "Working…"}
+                    {toolLabel(language, name)}
                   </p>
                 );
               }
@@ -129,7 +125,9 @@ export function MessageList({
       ))}
 
       {status === "submitted" && (
-        <p className="pl-1 text-xs italic text-neutral-400">Thinking…</p>
+        <p className="pl-1 text-xs italic text-neutral-400">
+          {COPY[language].thinking}
+        </p>
       )}
     </div>
   );

@@ -5,12 +5,14 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { MessageList } from "./MessageList";
 import { Composer } from "./Composer";
-
-const SUGGESTIONS = [
-  "A birthday cake for my mother",
-  "Flowers under LKR 5000",
-  "A soft toy for a 5-year-old",
-];
+import {
+  type Language,
+  DEFAULT_LANGUAGE,
+  LANGUAGE_OPTIONS,
+  OPENERS,
+  SUGGESTIONS,
+  COPY,
+} from "@/lib/ai/language";
 
 export function ChatPanel() {
   const { messages, sendMessage, status, error, regenerate, clearError } =
@@ -18,6 +20,7 @@ export function ChatPanel() {
       transport: new DefaultChatTransport({ api: "/api/chat" }),
     });
   const [input, setInput] = useState("");
+  const [language, setLanguage] = useState<Language>(DEFAULT_LANGUAGE);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -31,30 +34,62 @@ export function ChatPanel() {
     const trimmed = text.trim();
     if (!trimmed || status !== "ready") return;
     if (error) clearError();
-    sendMessage({ text: trimmed });
+    // Pass the current toggle per-turn (ChatRequestOptions.body). `send` is
+    // recreated each render, so it always reads the latest `language`.
+    sendMessage({ text: trimmed }, { body: { language } });
     setInput("");
   }
 
   const isEmpty = messages.length === 0;
+  const opener = OPENERS[language];
 
   return (
     <div className="flex h-full flex-col">
+      <div className="flex justify-center pt-2">
+        <div
+          role="radiogroup"
+          aria-label="Language"
+          className="inline-flex rounded-full border border-black/10 bg-white p-0.5 text-xs dark:border-white/10 dark:bg-neutral-900"
+        >
+          {LANGUAGE_OPTIONS.map((opt) => {
+            const active = opt.value === language;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => setLanguage(opt.value)}
+                className={
+                  "rounded-full px-3 py-1 transition " +
+                  (active
+                    ? "bg-emerald-600 text-white"
+                    : "text-neutral-600 hover:text-emerald-700 dark:text-neutral-300")
+                }
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-1 py-4">
         {isEmpty ? (
           <div className="mx-auto mt-10 max-w-md text-center">
             <p className="text-lg font-medium text-neutral-800 dark:text-neutral-100">
-              Kapruka gift assistant
+              {opener.title}
             </p>
-            <p className="mt-1 text-sm text-neutral-500">
-              Tell me who you’re shopping for and I’ll find the perfect gift.
-            </p>
-            <div className="mt-5 flex flex-wrap justify-center gap-2">
-              {SUGGESTIONS.map((s) => (
+            <p className="mt-1 text-sm text-neutral-500">{opener.subtitle}</p>
+            {/* Left-aligned example rows: the phrases are full sentences, so a
+                rounded-full pill would wrap awkwardly at phone width. */}
+            <div className="mx-auto mt-5 flex max-w-sm flex-col gap-2">
+              {SUGGESTIONS[language].map((s) => (
                 <button
                   key={s}
                   type="button"
                   onClick={() => send(s)}
-                  className="rounded-full border border-black/10 bg-white px-3 py-1.5 text-xs text-neutral-700 transition hover:border-emerald-400 hover:text-emerald-700 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-300"
+                  className="rounded-xl border border-black/10 bg-white px-3 py-2 text-left text-xs leading-snug text-neutral-700 transition hover:border-emerald-400 hover:text-emerald-700 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-300"
                 >
                   {s}
                 </button>
@@ -62,7 +97,12 @@ export function ChatPanel() {
             </div>
           </div>
         ) : (
-          <MessageList messages={messages} status={status} onAction={send} />
+          <MessageList
+            messages={messages}
+            status={status}
+            language={language}
+            onAction={send}
+          />
         )}
 
         {error && (
@@ -74,7 +114,7 @@ export function ChatPanel() {
               disabled={status !== "ready"}
               className="rounded-lg border border-amber-400/60 px-3 py-1 text-xs font-medium transition hover:bg-amber-100 disabled:opacity-40 dark:hover:bg-amber-900/40"
             >
-              Try again
+              {COPY[language].tryAgain}
             </button>
           </div>
         )}

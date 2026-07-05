@@ -2,6 +2,7 @@
 
 import type { CheckoutAllResult, CheckoutOutcome } from "@/lib/kapruka/types";
 import { OrderSummary } from "./OrderSummary";
+import { type Language, COPY } from "@/lib/ai/language";
 
 type BatchOk = Extract<CheckoutAllResult, { ok: true }>;
 
@@ -24,12 +25,15 @@ function successList(names: string[]): string {
 /** A soft-failed cart: distinct "needs attention" card, never styled as success. */
 function FailedCard({
   outcome,
+  language,
   onAction,
 }: {
   outcome: Extract<CheckoutOutcome, { status: "failed" }>;
+  language: Language;
   onAction?: (text: string) => void;
 }) {
   const { cartName, reason, nextAvailableDate } = outcome;
+  const copy = COPY[language].batch;
   return (
     <div className="rounded-2xl border border-amber-400/60 bg-amber-50 p-4 dark:border-amber-500/40 dark:bg-amber-950/40">
       <div className="flex items-start gap-2">
@@ -38,7 +42,7 @@ function FailedCard({
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
-            {cartName} — needs attention
+            {cartName} — {copy.needsAttention}
           </p>
           <p className="mt-1 text-sm text-amber-800 dark:text-amber-300/90">
             {reason}
@@ -53,7 +57,7 @@ function FailedCard({
               }
               className="mt-3 rounded-xl bg-amber-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-700"
             >
-              Book {formatDate(nextAvailableDate)} instead
+              {copy.bookInstead.replace("{date}", formatDate(nextAvailableDate))}
             </button>
           ) : null}
         </div>
@@ -73,9 +77,11 @@ function CartCaption({ name }: { name: string }) {
 
 export function CheckoutBatch({
   data,
+  language,
   onAction,
 }: {
   data: BatchOk;
+  language: Language;
   onAction?: (text: string) => void;
 }) {
   const { outcomes, successCount, failureCount } = data;
@@ -86,7 +92,7 @@ export function CheckoutBatch({
   // Single clean order, no failures → render a bare OrderSummary (identical to
   // the Sprint 2 single-recipient experience; no batch header).
   if (outcomes.length === 1 && outcomes[0].status === "success") {
-    return <OrderSummary data={outcomes[0].order} />;
+    return <OrderSummary data={outcomes[0].order} language={language} />;
   }
 
   return (
@@ -111,10 +117,15 @@ export function CheckoutBatch({
         o.status === "success" ? (
           <div key={i}>
             <CartCaption name={o.cartName} />
-            <OrderSummary data={o.order} />
+            <OrderSummary data={o.order} language={language} />
           </div>
         ) : (
-          <FailedCard key={i} outcome={o} onAction={onAction} />
+          <FailedCard
+            key={i}
+            outcome={o}
+            language={language}
+            onAction={onAction}
+          />
         ),
       )}
     </div>
