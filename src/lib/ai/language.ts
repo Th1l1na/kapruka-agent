@@ -117,6 +117,10 @@ export interface UiCopy {
     payLink: string;
     /** Note shown at the foot of an expired order card. */
     expiredNote: string;
+    /** "Copy pay link" text button under the order actions. */
+    copyPayLink: string;
+    /** Brief confirmation shown for 2s after copying the pay link. */
+    copied: string;
   };
   batch: {
     /** Suffix in "{cart} — {needsAttention}". */
@@ -181,6 +185,8 @@ export const COPY: Record<Language, UiCopy> = {
       payLink: "pay link",
       expiredNote:
         "The 60-minute window closed — ask me to recreate the order for a fresh pay link.",
+      copyPayLink: "Copy pay link",
+      copied: "Copied!",
     },
     batch: {
       needsAttention: "needs attention",
@@ -199,6 +205,8 @@ export const COPY: Record<Language, UiCopy> = {
       payLink: "pay link",
       expiredNote:
         "විනාඩි 60ක කාලය ඉවරයි — අලුත් pay link එකකට order එක ආයෙ හදන්න කියන්න.",
+      copyPayLink: "පේ ලින්ක් copy කරන්න",
+      copied: "Copy උනා!",
     },
     batch: {
       needsAttention: "අවධානය ඕන",
@@ -217,6 +225,8 @@ export const COPY: Record<Language, UiCopy> = {
       payLink: "pay link",
       expiredNote:
         "Minutes 60ke welawa iwarai — aluth pay link ekakata order eka ayet hadanna kiyanna.",
+      copyPayLink: "Pay link copy karanna",
+      copied: "Copy una!",
     },
     batch: {
       needsAttention: "attention ona",

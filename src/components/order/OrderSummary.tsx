@@ -40,6 +40,43 @@ function useCountdown(expiresAt: string): { label: string; expired: boolean } {
   return { label: `${mins}:${secs.toString().padStart(2, "0")}`, expired: false };
 }
 
+/**
+ * Small gray text link that copies the pay link to the clipboard and flips to a
+ * localized "Copied!" state for 2 seconds. Local state only, no dependencies.
+ */
+function CopyPayLink({
+  payUrl,
+  copyLabel,
+  copiedLabel,
+}: {
+  payUrl: string;
+  copyLabel: string;
+  copiedLabel: string;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!copied) return;
+    const id = setTimeout(() => setCopied(false), 2000);
+    return () => clearTimeout(id);
+  }, [copied]);
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        navigator.clipboard?.writeText(payUrl).then(
+          () => setCopied(true),
+          () => {}, // clipboard blocked (e.g. insecure context) — no-op
+        );
+      }}
+      className="mx-auto text-xs font-medium text-neutral-400 underline-offset-2 transition hover:text-neutral-600 hover:underline dark:hover:text-neutral-300"
+    >
+      {copied ? copiedLabel : copyLabel}
+    </button>
+  );
+}
+
 function FailureCard({ message }: { message: string }) {
   return (
     <div className="rounded-2xl border border-amber-300/60 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-950/40 dark:text-amber-200">
@@ -220,6 +257,12 @@ export function OrderSummary({
             Send to family to pay
           </a>
         </div>
+
+        <CopyPayLink
+          payUrl={checkoutUrl}
+          copyLabel={copy.copyPayLink}
+          copiedLabel={copy.copied}
+        />
 
         {expired ? (
           <p className="text-center text-xs text-red-600 dark:text-red-400">
