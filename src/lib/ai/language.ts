@@ -135,6 +135,25 @@ export interface UiCopy {
     /** Announced when the button will switch the UI to dark mode. */
     toDark: string;
   };
+  /** The additive cart panel (right rail on desktop / bottom drawer on mobile). */
+  cart: {
+    /** Panel heading. */
+    title: string;
+    /** Shown when there are no carts with items. */
+    empty: string;
+    /** Per-cart subtotal row. */
+    subtotal: string;
+    /** Combined total across carts. */
+    total: string;
+    /** Pay-now button (same URL/handler as the OrderSummary button). */
+    payNow: string;
+    /** Send-to-family button (same URL/handler as OrderSummary). */
+    sendToFamily: string;
+    /** aria-label for the collapsed launcher button. */
+    open: string;
+    /** aria-label for the panel close button. */
+    close: string;
+  };
 }
 
 const TOOL_LABELS_EN: Record<string, string> = {
@@ -203,6 +222,16 @@ export const COPY: Record<Language, UiCopy> = {
       toLight: "Switch to light mode",
       toDark: "Switch to dark mode",
     },
+    cart: {
+      title: "Your cart",
+      empty: "No gifts in your cart yet.",
+      subtotal: "Subtotal",
+      total: "Total",
+      payNow: "Pay now",
+      sendToFamily: "Send to family to pay",
+      open: "Open cart",
+      close: "Close cart",
+    },
   },
   sinhala: {
     tryAgain: "ආයෙ try කරන්න",
@@ -227,6 +256,16 @@ export const COPY: Record<Language, UiCopy> = {
       toLight: "Light mode එකට මාරු කරන්න",
       toDark: "Dark mode එකට මාරු කරන්න",
     },
+    cart: {
+      title: "ඔයාගෙ කරත්තෙ",
+      empty: "තාම කරත්තෙ තෑගි නෑ.",
+      subtotal: "උප එකතුව",
+      total: "මුළු එකතුව",
+      payNow: "දැන් ගෙවන්න",
+      sendToFamily: "පවුලට එවලා ගෙවන්න",
+      open: "කරත්තෙ බලන්න",
+      close: "වහන්න",
+    },
   },
   tanglish: {
     tryAgain: "Ayet try karanna",
@@ -250,6 +289,16 @@ export const COPY: Record<Language, UiCopy> = {
     themeToggle: {
       toLight: "Light mode ekata maaru karanna",
       toDark: "Dark mode ekata maaru karanna",
+    },
+    cart: {
+      title: "Oyage cart eka",
+      empty: "Cart eke thama gifts nææ.",
+      subtotal: "Subtotal",
+      total: "Total",
+      payNow: "Dæn gevanna",
+      sendToFamily: "Family ekata evala gevanna",
+      open: "Cart eka open karanna",
+      close: "Close karanna",
     },
   },
 };

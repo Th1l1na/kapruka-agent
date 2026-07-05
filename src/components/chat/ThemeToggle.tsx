@@ -1,20 +1,44 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { type Language, COPY } from "@/lib/ai/language";
 
 /**
  * Dark/light theme toggle (Sprint 5, ui-redesign).
  *
  * Dark is the default look, so the SSR markup ships with `.dark` on <html>
- * (see layout.tsx) and this button initialises to "dark" too — no hydration
- * mismatch. After mount, a useEffect reconciles with the persisted choice in
- * localStorage; a second effect applies the class to <html> and persists.
- * Toggling only adds/removes `class="dark"`, which drives Tailwind's `dark:`
- * utilities (class-based variant configured in globals.css).
+ * (see layout.tsx) and the server snapshot below is "dark" too — no hydration
+ * mismatch. The persisted choice lives in localStorage and is read through a
+ * tiny external store via useSyncExternalStore (which also keeps tabs in sync);
+ * a lone effect mirrors the current theme onto <html> by toggling `.dark`,
+ * which drives Tailwind's class-based `dark:` utilities (see globals.css).
  */
 type Theme = "dark" | "light";
 const STORAGE_KEY = "kapruka-theme";
+const listeners = new Set<() => void>();
+
+function subscribe(callback: () => void): () => void {
+  listeners.add(callback);
+  window.addEventListener("storage", callback); // reflect changes from other tabs
+  return () => {
+    listeners.delete(callback);
+    window.removeEventListener("storage", callback);
+  };
+}
+
+function getSnapshot(): Theme {
+  return localStorage.getItem(STORAGE_KEY) === "light" ? "light" : "dark";
+}
+
+/** SSR/hydration snapshot — matches the `.dark` shipped on <html>. */
+function getServerSnapshot(): Theme {
+  return "dark";
+}
+
+function setTheme(theme: Theme): void {
+  localStorage.setItem(STORAGE_KEY, theme);
+  for (const l of listeners) l();
+}
 
 function SunIcon() {
   return (
@@ -52,19 +76,12 @@ function MoonIcon() {
 }
 
 export function ThemeToggle({ language }: { language: Language }) {
-  const [theme, setTheme] = useState<Theme>("dark");
+  const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
-  // Reconcile with the persisted choice after hydration (reading localStorage
-  // during render would mismatch the server-rendered "dark" default).
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === "light" || stored === "dark") setTheme(stored);
-  }, []);
-
-  // Apply to <html> and persist whenever the theme changes.
+  // Mirror the current theme onto <html> (updates an external system from React
+  // state — the sanctioned effect shape). Runs on mount and on every change.
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
-    localStorage.setItem(STORAGE_KEY, theme);
   }, [theme]);
 
   const isDark = theme === "dark";

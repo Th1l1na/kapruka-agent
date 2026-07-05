@@ -71,7 +71,13 @@ export interface CartSummaryView {
   cartName: string;
   status: CartStatus;
   itemCount: number;
-  items: { id: string; name: string; quantity: number; unitPrice: number }[];
+  items: {
+    id: string;
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    image_url?: string;
+  }[];
   total: number;
   currency: string;
   recipient: RecipientInfo;
@@ -300,6 +306,7 @@ function toView(cart: Cart): CartSummaryView {
       name: i.name,
       quantity: i.quantity,
       unitPrice: i.price.amount,
+      image_url: i.image_url,
     })),
     total,
     currency,

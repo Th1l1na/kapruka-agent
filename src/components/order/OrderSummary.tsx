@@ -44,7 +44,7 @@ function useCountdown(expiresAt: string): { label: string; expired: boolean } {
  * Small gray text link that copies the pay link to the clipboard and flips to a
  * localized "Copied!" state for 2 seconds. Local state only, no dependencies.
  */
-function CopyPayLink({
+export function CopyPayLink({
   payUrl,
   copyLabel,
   copiedLabel,

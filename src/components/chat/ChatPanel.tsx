@@ -6,6 +6,8 @@ import { DefaultChatTransport } from "ai";
 import { MessageList } from "./MessageList";
 import { Composer } from "./Composer";
 import { ThemeToggle } from "./ThemeToggle";
+import { CartProvider, useCart } from "@/components/cart/CartContext";
+import { CartPanel } from "@/components/cart/CartPanel";
 import {
   type Language,
   DEFAULT_LANGUAGE,
@@ -16,6 +18,14 @@ import {
 } from "@/lib/ai/language";
 
 export function ChatPanel() {
+  return (
+    <CartProvider>
+      <ChatPanelInner />
+    </CartProvider>
+  );
+}
+
+function ChatPanelInner() {
   const { messages, sendMessage, status, error, regenerate, clearError } =
     useChat({
       transport: new DefaultChatTransport({ api: "/api/chat" }),
@@ -23,6 +33,7 @@ export function ChatPanel() {
   const [input, setInput] = useState("");
   const [language, setLanguage] = useState<Language>(DEFAULT_LANGUAGE);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { syncFromMessages } = useCart();
 
   useEffect(() => {
     scrollRef.current?.scrollTo({
@@ -30,6 +41,12 @@ export function ChatPanel() {
       behavior: "smooth",
     });
   }, [messages, status]);
+
+  // Keep the client cart mirror in sync with the server cart by replaying the
+  // tool outputs in the stream (list_carts + cart mutations + checkout_all).
+  useEffect(() => {
+    syncFromMessages(messages);
+  }, [messages, syncFromMessages]);
 
   function send(text: string) {
     const trimmed = text.trim();
@@ -130,6 +147,8 @@ export function ChatPanel() {
           disabled={status !== "ready"}
         />
       </div>
+
+      <CartPanel language={language} />
     </div>
   );
 }
