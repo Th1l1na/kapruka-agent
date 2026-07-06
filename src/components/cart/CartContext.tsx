@@ -26,8 +26,9 @@ export interface CartMirror {
   /** Latest known view of each cart, in first-seen order. */
   carts: CartSummaryView[];
   /**
-   * Payable order per cart name, captured from checkout_all. Presence here (plus
-   * a "checked_out" status) is what gates the pay buttons in the panel.
+   * Payable order per cart name, captured from checkout_all (carries
+   * checkoutUrl, whatsappUrl, orderRef, expiresAt, …). Presence here is what
+   * gates the pay buttons in the panel.
    */
   checkoutByCart: Record<string, OrderSuccess>;
 }

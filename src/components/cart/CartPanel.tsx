@@ -84,8 +84,11 @@ function CartSection({
   language: Language;
 }) {
   const c = COPY[language].cart;
-  // Buttons appear only once this cart has actually been through checkout.
-  const showButtons = cart.status === "checked_out" && !!order;
+  // Show the pay buttons as soon as this cart has a stored checkout order.
+  // Gating on cart.status too was wrong: after checkout_all the model rarely
+  // re-runs list_carts, so the mirror's status often lingers at "open" — the
+  // presence of the order is the authoritative signal, matching OrderSummary.
+  const showButtons = !!order;
 
   return (
     <div className="flex flex-col gap-2">
