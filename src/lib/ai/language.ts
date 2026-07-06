@@ -104,6 +104,12 @@ export interface UiCopy {
   thinking: string;
   /** Fallback loading line for an unmapped tool. */
   working: string;
+  /**
+   * Toast shown when the language toggle changes mid-conversation. Already in
+   * the newly-selected language, so it names that language inline. Reassures
+   * that earlier messages are NOT retranslated.
+   */
+  languageSwitch: string;
   /** ProductGrid when a search returns nothing. */
   emptyResults: string;
   /** Warm one-liner per tool while it is still running (keyed by tool name). */
@@ -203,6 +209,8 @@ export const COPY: Record<Language, UiCopy> = {
     tryAgain: "Try again",
     thinking: "Thinking…",
     working: "Working…",
+    languageSwitch:
+      "New messages will be in English. Earlier messages stay as they were.",
     emptyResults: "No matching gifts found — try a different keyword.",
     toolLabels: TOOL_LABELS_EN,
     order: {
@@ -237,6 +245,8 @@ export const COPY: Record<Language, UiCopy> = {
     tryAgain: "ආයෙ try කරන්න",
     thinking: "හිතනවා…",
     working: "වැඩ කරනවා…",
+    languageSwitch:
+      "අලුත් messages සිංහලෙන්. කලින් තිබුණ ඒවා තිබුණ විදිහටම තියෙනවා.",
     emptyResults: "ගැලපෙන තෑගි හම්බුනේ නෑ — වෙන වචනයක් try කරන්න.",
     toolLabels: TOOL_LABELS_SI,
     order: {
@@ -271,6 +281,8 @@ export const COPY: Record<Language, UiCopy> = {
     tryAgain: "Ayet try karanna",
     thinking: "Hitanawa…",
     working: "Wæda karanawa…",
+    languageSwitch:
+      "Aluth messages Tanglish walin. Kalin thibuna ewa thibuna widihatama thiyenawa.",
     emptyResults: "Galapena gifts hambune nææ — wena keyword ekak try karanna.",
     toolLabels: TOOL_LABELS_TA,
     order: {

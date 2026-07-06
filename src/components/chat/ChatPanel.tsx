@@ -32,6 +32,10 @@ function ChatPanelInner() {
     });
   const [input, setInput] = useState("");
   const [language, setLanguage] = useState<Language>(DEFAULT_LANGUAGE);
+  // Mid-conversation language-switch toast (auto-dismissed). Each setToast makes
+  // a fresh object, so the dismiss effect below restarts its 4s timer on every
+  // switch.
+  const [toast, setToast] = useState<{ text: string } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { syncFromMessages } = useCart();
 
@@ -47,6 +51,23 @@ function ChatPanelInner() {
   useEffect(() => {
     syncFromMessages(messages);
   }, [messages, syncFromMessages]);
+
+  // Auto-dismiss the language-switch toast after 4s.
+  useEffect(() => {
+    if (!toast) return;
+    const id = setTimeout(() => setToast(null), 4000);
+    return () => clearTimeout(id);
+  }, [toast]);
+
+  // Switch the per-turn language. If the conversation is already underway, flash
+  // a toast (in the NEW language) that only new messages change — earlier ones
+  // are never retranslated.
+  function selectLanguage(next: Language) {
+    if (next !== language && messages.length >= 1) {
+      setToast({ text: COPY[next].languageSwitch });
+    }
+    setLanguage(next);
+  }
 
   function send(text: string) {
     const trimmed = text.trim();
@@ -77,7 +98,7 @@ function ChatPanelInner() {
                 type="button"
                 role="radio"
                 aria-checked={active}
-                onClick={() => setLanguage(opt.value)}
+                onClick={() => selectLanguage(opt.value)}
                 className={
                   "rounded-full px-3 py-1 transition " +
                   (active
@@ -149,6 +170,18 @@ function ChatPanelInner() {
       </div>
 
       <CartPanel language={language} />
+
+      {toast ? (
+        <div className="pointer-events-none fixed inset-x-0 top-3 z-50 flex justify-center px-4">
+          <div
+            role="status"
+            aria-live="polite"
+            className="pointer-events-auto max-w-sm rounded-xl border border-black/10 bg-white/95 px-4 py-2 text-center text-xs text-neutral-700 shadow-lg backdrop-blur dark:border-white/10 dark:bg-neutral-900/95 dark:text-neutral-200"
+          >
+            {toast.text}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
