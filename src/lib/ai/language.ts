@@ -141,6 +141,23 @@ export interface UiCopy {
     /** Announced when the button will switch the UI to dark mode. */
     toDark: string;
   };
+  /** The product-results carousel (coverflow of search results). */
+  carousel: {
+    /** aria-label on the region wrapper. */
+    region: string;
+    /** Full-width primary button under the focused card. */
+    addToCart: string;
+    /** Flashed on the button for ~2s right after an add. */
+    added: string;
+    /** Shown when the focused product is already in a cart (tap = remove). */
+    inCart: string;
+    /** Previous-card arrow (aria-label). */
+    prev: string;
+    /** Next-card arrow (aria-label). */
+    next: string;
+    /** aria-live announcement on focus change; "{name}" is the product name. */
+    nowShowing: string;
+  };
   /** The additive cart panel (right rail on desktop / bottom drawer on mobile). */
   cart: {
     /** Panel heading. */
@@ -230,6 +247,15 @@ export const COPY: Record<Language, UiCopy> = {
       toLight: "Switch to light mode",
       toDark: "Switch to dark mode",
     },
+    carousel: {
+      region: "Product results",
+      addToCart: "Add to cart",
+      added: "Added ✓",
+      inCart: "In cart ✓",
+      prev: "Previous product",
+      next: "Next product",
+      nowShowing: "Now showing {name}",
+    },
     cart: {
       title: "Your cart",
       empty: "No gifts in your cart yet.",
@@ -266,6 +292,15 @@ export const COPY: Record<Language, UiCopy> = {
       toLight: "Light mode එකට මාරු කරන්න",
       toDark: "Dark mode එකට මාරු කරන්න",
     },
+    carousel: {
+      region: "තෑගි ප්‍රතිඵල",
+      addToCart: "Cart එකට දාන්න",
+      added: "දැම්මා ✓",
+      inCart: "Cart එකේ තියෙනවා ✓",
+      prev: "කලින් තෑග්ග",
+      next: "ඊළඟ තෑග්ග",
+      nowShowing: "දැන් පෙන්නනවා {name}",
+    },
     cart: {
       title: "ඔයාගෙ කරත්තෙ",
       empty: "තාම කරත්තෙ තෑගි නෑ.",
@@ -301,6 +336,15 @@ export const COPY: Record<Language, UiCopy> = {
     themeToggle: {
       toLight: "Light mode ekata maaru karanna",
       toDark: "Dark mode ekata maaru karanna",
+    },
+    carousel: {
+      region: "Product results",
+      addToCart: "Cart ekata daanna",
+      added: "Add una ✓",
+      inCart: "Cart eke thiyenawa ✓",
+      prev: "Kalin product eka",
+      next: "Ilanga product eka",
+      nowShowing: "Dæn penvanawa {name}",
     },
     cart: {
       title: "Oyage cart eka",
