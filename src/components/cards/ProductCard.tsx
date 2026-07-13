@@ -1,5 +1,4 @@
 import type { Product } from "@/lib/kapruka/types";
-import { type Language, COPY } from "@/lib/ai/language";
 
 function formatPrice(amount: number, currency: string): string {
   // e.g. "LKR 5,770" — group digits, no decimals (Kapruka prices are whole LKR)
@@ -37,26 +36,5 @@ export function ProductCard({ product }: { product: Product }) {
         </p>
       </div>
     </a>
-  );
-}
-
-export function ProductGrid({
-  products,
-  language,
-}: {
-  products: Product[];
-  language: Language;
-}) {
-  if (products.length === 0) {
-    return (
-      <p className="text-sm text-neutral-500">{COPY[language].emptyResults}</p>
-    );
-  }
-  return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-      {products.map((p) => (
-        <ProductCard key={p.id} product={p} />
-      ))}
-    </div>
   );
 }

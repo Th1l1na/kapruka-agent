@@ -1,6 +1,6 @@
 import { isToolUIPart, getToolName, type UIMessage } from "ai";
 import type { Product, CheckoutAllResult } from "@/lib/kapruka/types";
-import { ProductGrid } from "@/components/cards/ProductCard";
+import { ProductCarousel } from "@/components/cards/ProductCarousel";
 import { CheckoutBatch } from "@/components/order/CheckoutBatch";
 import { type Language, COPY, toolLabel } from "@/lib/ai/language";
 
@@ -73,9 +73,11 @@ export function MessageList({
                   const out = part.output as SearchOutput;
                   return (
                     <div key={i} className="my-1">
-                      <ProductGrid
+                      <ProductCarousel
                         products={out?.products ?? []}
                         language={language}
+                        onAction={onAction}
+                        busy={status !== "ready"}
                       />
                     </div>
                   );
