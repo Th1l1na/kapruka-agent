@@ -12,6 +12,7 @@ import { toLanguage } from "@/lib/ai/language";
 import { friendlyError } from "@/lib/ai/errors";
 import { kaprukaTools } from "@/lib/kapruka/tools";
 import { cartTools } from "@/lib/cart/tools";
+import { specialDayTools } from "@/lib/ai/special-days";
 
 // Node runtime: the MCP client uses a persistent streamable-HTTP connection,
 // which we want to keep warm across invocations (not the edge runtime).
@@ -25,7 +26,7 @@ export async function POST(req: Request) {
     await req.json();
 
   const lang = toLanguage(language);
-  const tools = { ...kaprukaTools, ...cartTools };
+  const tools = { ...kaprukaTools, ...cartTools, ...specialDayTools };
 
   const result = streamText({
     model,

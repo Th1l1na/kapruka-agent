@@ -9,6 +9,7 @@ import {
   DEFAULT_CART_NAME,
 } from "./cart";
 import { checkoutAll } from "./checkout";
+import { lookupProduct } from "@/lib/kapruka/product-registry";
 import type { CheckoutAllResult } from "@/lib/kapruka/types";
 
 /**
@@ -56,8 +57,18 @@ export const addToCartTool = tool({
     image_url: z.string().optional(),
     url: z.string().optional(),
   }),
-  execute: async ({ cartName, ...input }) =>
-    addToCart(cartName, { ...input, currency: "LKR" }),
+  execute: async ({ cartName, ...input }) => {
+    // The model can't supply image_url/url (its view of search results is a lean
+    // text summary), so backfill them from the product registry by id. This is
+    // what makes real thumbnails show in the cart panel and the order card.
+    const known = lookupProduct(input.id);
+    return addToCart(cartName, {
+      ...input,
+      image_url: input.image_url ?? known?.image_url,
+      url: input.url ?? known?.url,
+      currency: "LKR",
+    });
+  },
 });
 
 export const removeFromCartTool = tool({

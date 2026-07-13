@@ -2,6 +2,7 @@ import { tool } from "ai";
 import { z } from "zod";
 import { callKapruka } from "./client";
 import { cached } from "./cache";
+import { rememberProducts } from "./product-registry";
 import { searchProducts } from "./search";
 import { resolveCity } from "./cities";
 import { checkDelivery } from "./delivery";
@@ -76,6 +77,10 @@ export const searchProductsTool = tool({
         !isExcludedCategoryName(p.category?.name),
     );
 
+    // Remember image_url/url per id so add_to_cart can backfill them (the model
+    // only ever sees a lean text summary without URLs — see toModelOutput below).
+    rememberProducts(products);
+
     return {
       count: products.length,
       products,
@@ -149,13 +154,16 @@ export const getProductTool = tool({
     const key = `product:${id.toLowerCase()}`;
     // get_product returns a richer superset of Product; typed loosely for now
     // (full shape not yet JSON-verified — see notes/data-shapes.md TODO).
-    return cached(key, PRODUCT_TTL_MS, () =>
+    const product = await cached(key, PRODUCT_TTL_MS, () =>
       callKapruka<Product & Record<string, unknown>>("kapruka_get_product", {
         product_id: id,
         currency: "LKR",
         response_format: "json",
       }),
     );
+    // Remember its image_url/url so a later add_to_cart can backfill them.
+    rememberProducts([product]);
+    return product;
   },
 });
 
